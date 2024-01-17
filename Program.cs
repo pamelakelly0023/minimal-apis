@@ -1,3 +1,4 @@
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -40,5 +41,26 @@ app.MapGet("/todos/http", async(HttpRequest req, HttpResponse res) =>
     await res.WriteAsync($"hello, { name }");
 });
 
+//Custom binding
+app.MapPost("/todos/custom", (TodoCustom todo) => todo);
+
 app.Run();
 record Todo(int Id, string Title);
+
+record TodoCustom(int Id, string Title)
+{
+    public static bool TryParse(string todoEncoded, out TodoCustom? todo)
+    {
+        try{
+            var parts = todoEncoded.Split(",");
+            todo = new TodoCustom(int.Parse(parts[0]), parts[1]);
+            return true;
+        }catch(Exception ex)
+        { 
+            todo = null;
+            return false;
+        }
+    }
+}
+
+
