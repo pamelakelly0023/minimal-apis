@@ -1,5 +1,7 @@
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.VisualBasic;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -44,7 +46,23 @@ app.MapGet("/todos/http", async(HttpRequest req, HttpResponse res) =>
 //Custom binding
 app.MapPost("/todos/custom", (TodoCustom todo) => todo);
 
+// Results
+
+app.MapGet("/results", (int id)
+    => id > 10 ? 
+        Results.Ok(new Resp() { Message = "Ok", IsSuccess = true })
+        : Results.NotFound()
+)
+    .Produces<Resp>(StatusCodes.Status200OK)
+    .Produces(StatusCodes.Status404NotFound);
+
 app.Run();
+
+// Responses
+record Resp {
+    public bool IsSuccess {get ; set ;}
+    public string Message {get ; set ;}
+};
 record Todo(int Id, string Title);
 
 record TodoCustom(int Id, string Title)
