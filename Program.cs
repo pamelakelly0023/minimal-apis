@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
@@ -54,7 +55,20 @@ app.MapGet("/results", (int id)
         : Results.NotFound()
 )
     .Produces<Resp>(StatusCodes.Status200OK)
-    .Produces(StatusCodes.Status404NotFound);
+    .Produces(StatusCodes.Status404NotFound)
+    .WithOpenApi(operation => new(operation){
+        Summary = "Just a test Summary",
+        Description = " Just a test Description"
+    });
+
+// Endpoint nomeado
+app.MapGet("/api/v1/msgs/{id:int}", (int id ) => 
+    TypedResults.Ok(new Msg(id, "Teste")))
+    .WithName("GetDetail");
+
+app.MapPost("/api/v1/msgs", (Msg msg) => 
+    TypedResults.CreatedAtRoute(msg, "GetDetail", new { Id = msg.Id}))
+    .WithName("CreateMessage");
 
 app.Run();
 
@@ -63,9 +77,11 @@ record Resp {
     public bool IsSuccess {get ; set ;}
     public string Message {get ; set ;}
 };
+public record Msg (int Id, string Message);
 record Todo(int Id, string Title);
 
 record TodoCustom(int Id, string Title)
+
 {
     public static bool TryParse(string todoEncoded, out TodoCustom? todo)
     {
