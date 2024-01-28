@@ -2,7 +2,9 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.VisualBasic;
+using MinimalApi.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +12,8 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+// Adiciona DBContext
+builder.Services.AddDbContext<MinimalApiDbContext>(options => options.UseInMemoryDatabase("Todos"));
 
 var app = builder.Build();
 
@@ -20,81 +24,4 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Usando binding automático
-app.MapGet("/todos/{project}", (
-    string project, 
-    int page
-) => 
-    new { Greetings = $"Show: {project}, page {page}"}
-); 
-
-// Usando binding explícito 
-app.MapGet("/todos/explicito/{project}", (
-    [FromBody] string project, 
-    [FromQuery] int page
-) => 
-    new { Greetings = $"Show: {project}, page {page}"}
-);
-
-//Usando binding http request
-app.MapGet("/todos/http", async(HttpRequest req, HttpResponse res) =>
-{
-    var name = req.Query["name"];
-    await res.WriteAsync($"hello, { name }");
-});
-
-//Custom binding
-app.MapPost("/todos/custom", (TodoCustom todo) => todo);
-
-// Results
-
-app.MapGet("/results", (int id)
-    => id > 10 ? 
-        Results.Ok(new Resp() { Message = "Ok", IsSuccess = true })
-        : Results.NotFound()
-)
-    .Produces<Resp>(StatusCodes.Status200OK)
-    .Produces(StatusCodes.Status404NotFound)
-    .WithOpenApi(operation => new(operation){
-        Summary = "Just a test Summary",
-        Description = " Just a test Description"
-    });
-
-// Endpoint nomeado
-app.MapGet("/api/v1/msgs/{id:int}", (int id ) => 
-    TypedResults.Ok(new Msg(id, "Teste")))
-    .WithName("GetDetail");
-
-app.MapPost("/api/v1/msgs", (Msg msg) => 
-    TypedResults.CreatedAtRoute(msg, "GetDetail", new { Id = msg.Id}))
-    .WithName("CreateMessage");
-
 app.Run();
-
-// Responses
-record Resp {
-    public bool IsSuccess {get ; set ;}
-    public string Message {get ; set ;}
-};
-public record Msg (int Id, string Message);
-record Todo(int Id, string Title);
-
-record TodoCustom(int Id, string Title)
-
-{
-    public static bool TryParse(string todoEncoded, out TodoCustom? todo)
-    {
-        try{
-            var parts = todoEncoded.Split(",");
-            todo = new TodoCustom(int.Parse(parts[0]), parts[1]);
-            return true;
-        }catch(Exception ex)
-        { 
-            todo = null;
-            return false;
-        }
-    }
-}
-
-
