@@ -27,25 +27,28 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapGet("todos", (MinimalApiDbContext dbContext) 
+// Mapear o grupo de rotas
+var todosApi = app.MapGroup("/todos");
+
+todosApi.MapGet(string.Empty, (MinimalApiDbContext dbContext) 
     => TypedResults.Ok(dbContext.Todos.ToList()))
     .WithName("TodoList"); 
 
-app.MapGet("todos/{id:int}", Results<Ok<Todo>, NotFound> (int id, MinimalApiDbContext dbContext)
+todosApi.MapGet("{id:int}", Results<Ok<Todo>, NotFound> (int id, MinimalApiDbContext dbContext)
     => dbContext.Todos.FirstOrDefault(x => x.Id == id) is Todo todo ?
         TypedResults.Ok(todo) : TypedResults.NotFound()
     ).WithName("TodoDetails");
 
-app.MapPost("todos", (TodoApiInput input, MinimalApiDbContext dbContext) 
+todosApi.MapPost(string.Empty, (TodoApiInput input, MinimalApiDbContext dbContext) 
     => {
         var todo = new Todo(){ Description = input.Description };
         dbContext.Todos.Add(todo);
         dbContext.SaveChanges();
-        return TypedResults.CreatedAtRoute("TodoDetails", todo);
+        return TypedResults.CreatedAtRoute(todo, "TodoDetails", new { Id = todo.Id });
     })
-    .WithName("TodoList");
+    .WithName("TodoCreate");
 
-app.MapDelete("todos/{id:int}", Results<NoContent, NotFound> (int id, MinimalApiDbContext dbContext)
+todosApi.MapDelete("{id:int}", Results<NoContent, NotFound> (int id, MinimalApiDbContext dbContext)
     => {
         var todo = dbContext.Todos.FirstOrDefault(x => x.Id == id);
         if(todo is null)
@@ -55,7 +58,7 @@ app.MapDelete("todos/{id:int}", Results<NoContent, NotFound> (int id, MinimalApi
         return TypedResults.NoContent();
     }).WithName("TodoDelete");
 
-app.MapPut("todos/{id:int}", Results<Ok<Todo>, NotFound> (TodoApiInput input, int id, MinimalApiDbContext dbContext)
+todosApi.MapPut("{id:int}", Results<Ok<Todo>, NotFound> (TodoApiInput input, int id, MinimalApiDbContext dbContext)
     => {
         var todo = dbContext.Todos.FirstOrDefault(x => x.Id == id);
         if(todo is null)
